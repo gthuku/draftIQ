@@ -153,20 +153,6 @@ For each available player:
 Pick player with highest totalScore
 ```
 
-## Future Enhancements
-
-- [ ] Real-time multiplayer drafts
-- [ ] Draft history and analytics
-- [ ] Export draft results to CSV
-- [ ] Custom scoring settings (Standard, PPR, Half-PPR)
-- [ ] Undo/redo picks
-- [ ] Pick timer with auto-draft
-- [ ] Mock draft vs real draft comparisons
-- [ ] Integration with FantasyPros API for better ADP data
-- [ ] Player news and injury updates
-- [ ] Trade analyzer post-draft
-- [ ] Keeper league support
-
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
@@ -177,7 +163,7 @@ MIT License - feel free to use this project for your own purposes.
 
 ## Acknowledgments
 
-- Player data provided by [Sleeper API](https://docs.sleeper.com/)
+- Player data provided by https://github.com/dynastyprocess
 - Built with [Next.js](https://nextjs.org/)
 - Styled with [Tailwind CSS](https://tailwindcss.com/)
 
