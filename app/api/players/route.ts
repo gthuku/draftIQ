@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { fetchNFLPlayers } from '@/lib/api/nfl-data-api';
+import { fetchNFLPlayers } from '@/lib/api/rapidapi-nfl';
 import { ScoringFormat } from '@/lib/types';
 
 export async function GET(request: Request) {

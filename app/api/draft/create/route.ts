@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { CreateDraftRequest, DraftState } from '@/lib/types';
+import { CreateDraftRequest, DraftState, AIProfile } from '@/lib/types';
 import { initializeDraft } from '@/lib/draft/draft-engine';
-import { fetchNFLPlayers } from '@/lib/api/nfl-data-api';
+import { fetchNFLPlayers } from '@/lib/api/rapidapi-nfl';
 import { assignRandomProfiles, getAIProfileById } from '@/lib/ai/profiles';
 
 // In-memory draft storage (in production, use a database)
@@ -43,21 +43,50 @@ export async function POST(request: Request) {
 
     const availablePlayers = players;
 
-    // Assign AI profiles
-    const numAITeams = settings.numTeams - 1; // Exclude user team
-    let profiles;
+    // Build profile map per draft position (1-indexed)
+    const profilesByPosition: Map<number, AIProfile> = new Map();
+    const randomPool = assignRandomProfiles(settings.numTeams);
+    let randomPoolIndex = 0;
 
     if (aiProfiles && aiProfiles.length > 0) {
-      // Use specified profiles
-      profiles = aiProfiles.map((id) => getAIProfileById(id)).filter(Boolean);
-      // Fill remaining with random if not enough
-      while (profiles.length < numAITeams) {
-        profiles.push(...assignRandomProfiles(numAITeams - profiles.length));
+      // aiProfiles is an array where index represents position-1 (0-indexed)
+      // null values mean use random, non-null values are profile IDs
+      for (let i = 0; i < aiProfiles.length; i++) {
+        const position = i + 1; // Convert to 1-indexed
+        if (position === userDraftPosition) continue; // Skip user position
+
+        const profileId = aiProfiles[i];
+        if (profileId && profileId !== 'random') {
+          const profile = getAIProfileById(profileId);
+          if (profile) {
+            profilesByPosition.set(position, profile);
+          } else {
+            // Fallback to random if profile not found
+            profilesByPosition.set(position, randomPool[randomPoolIndex++ % randomPool.length]);
+          }
+        } else {
+          // Use random profile
+          profilesByPosition.set(position, randomPool[randomPoolIndex++ % randomPool.length]);
+        }
       }
-      profiles = profiles.slice(0, numAITeams);
-    } else {
-      // Assign random profiles
-      profiles = assignRandomProfiles(numAITeams);
+    }
+
+    // Fill any missing positions with random profiles
+    for (let position = 1; position <= settings.numTeams; position++) {
+      if (position === userDraftPosition) continue;
+      if (!profilesByPosition.has(position)) {
+        profilesByPosition.set(position, randomPool[randomPoolIndex++ % randomPool.length]);
+      }
+    }
+
+    // Build profiles array in draft order (excluding user position)
+    const profiles: AIProfile[] = [];
+    for (let position = 1; position <= settings.numTeams; position++) {
+      if (position === userDraftPosition) continue;
+      const profile = profilesByPosition.get(position);
+      if (profile) {
+        profiles.push(profile);
+      }
     }
 
     // Initialize draft
@@ -69,12 +98,14 @@ export async function POST(request: Request) {
       availablePlayers
     );
 
-    // Assign AI profiles to teams
-    draftState.teams.forEach((team, index) => {
+    // Assign AI profiles to teams by their draft position
+    draftState.teams.forEach((team) => {
       if (!team.isUser) {
-        const aiIndex = index < userDraftPosition - 1 ? index : index - 1;
-        team.aiProfile = profiles[aiIndex];
-        team.name = profiles[aiIndex].name;
+        const profile = profilesByPosition.get(team.draftPosition);
+        if (profile) {
+          team.aiProfile = profile;
+          team.name = profile.name;
+        }
       }
     });
 

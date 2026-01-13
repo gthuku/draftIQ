@@ -34,6 +34,7 @@ export interface Player {
   riskScore?: number; // 0-10 (higher = more risky)
   ceilingScore?: number; // Upside potential
   floorScore?: number; // Safety floor
+  headshot?: string; // ESPN headshot URL
 }
 
 // AI Profile model
@@ -180,7 +181,7 @@ export interface CreateDraftRequest {
   userTeamName: string;
   userDraftPosition: number;
   settings: DraftSettings;
-  aiProfiles?: string[]; // IDs of AI profiles to use
+  aiProfiles?: (string | null)[]; // IDs of AI profiles by draft position (null = random)
 }
 
 export interface MakePickRequest {
@@ -194,22 +195,3 @@ export interface AIPickRequest {
   teamId: string;
 }
 
-// Sleeper API types
-export interface SleeperPlayer {
-  player_id: string;
-  first_name: string;
-  last_name: string;
-  position: string;
-  team: string;
-  injury_status?: string;
-  years_exp?: number;
-  age?: number;
-  // Add more fields as needed from Sleeper API
-}
-
-export interface SleeperADPData {
-  [playerId: string]: {
-    adp: number;
-    count: number;
-  };
-}

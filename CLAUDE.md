@@ -7,7 +7,7 @@ An intelligent NFL mock draft application that simulates fantasy football drafts
 - **Frontend**: React 19.2.3, Next.js 16.1.1 (App Router), TypeScript 5, Tailwind CSS 4
 - **State Management**: Zustand 5.0.10
 - **Backend**: Next.js API Routes (serverless functions)
-- **Data**: Sleeper API (NFL player data), in-memory storage (Map)
+- **Data**: RapidAPI Tank01 NFL API (player data & ADP), in-memory storage (Map)
 - **AI**: Custom multi-factor decision engine with 6 personality profiles
 
 ## Project Structure
@@ -20,7 +20,7 @@ An intelligent NFL mock draft application that simulates fantasy football drafts
 - `lib/` - Business logic and utilities
   - `lib/ai/` - AI decision engine and personality profiles
   - `lib/draft/` - Draft mechanics (snake draft, validation)
-  - `lib/api/` - External API clients (Sleeper)
+  - `lib/api/` - External API clients (RapidAPI NFL)
   - `lib/types.ts:1` - TypeScript interfaces (Player, Team, DraftState, AIProfile)
 - `store/draft-store.ts:1` - Zustand state management
 
@@ -52,11 +52,11 @@ All endpoints return `{ success: boolean; data?: T; error?: string }`
 - `GET /api/draft/[id]` - Fetch draft state
 - `POST /api/draft/pick` - Execute user pick
 - `POST /api/ai-pick` - Trigger AI decision
-- `GET /api/players` - Fetch player pool from Sleeper API
+- `GET /api/players` - Fetch player pool from RapidAPI
 
 ## Data Flow
 
-**Draft Creation**: User setup → API creates draft → Fetch players from Sleeper → Initialize state → Redirect to draft room
+**Draft Creation**: User setup → API creates draft → Fetch players from RapidAPI → Initialize state → Redirect to draft room
 
 **User Pick**: Select player → Validate → Execute → Update Zustand store → Trigger AI turn
 
@@ -86,9 +86,13 @@ const currentTeam = useCurrentTeam(); // Selector hook
 
 - **No persistence** - In-memory storage only (data lost on restart)
 - **No testing** - No unit/integration tests configured
-- **Mock ADP data** - Using calculated ADP instead of real fantasy data
 - **Monolithic components** - Draft room page not decomposed into reusable components
 - **SQLite unused** - better-sqlite3 installed but not utilized
+
+## Environment Variables
+
+Required environment variables (see `.env.example`):
+- `RAPIDAPI_KEY` - API key for Tank01 NFL API on RapidAPI
 
 ## Additional Documentation
 

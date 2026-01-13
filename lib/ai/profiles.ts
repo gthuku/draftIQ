@@ -119,6 +119,25 @@ export const AI_PROFILES: Record<string, AIProfile> = {
     byeWeekAwareness: 0.65, // Good awareness
     favoriteTeams: [],
   },
+
+  bestAvailable: {
+    id: 'bestAvailable',
+    name: 'Best Available',
+    description: 'Pure value drafter. Always picks the best available player based on ADP, with smart position need awareness.',
+    riskTolerance: 0.3, // Conservative - sticks to rankings
+    positionalPreferences: {
+      QB: 0.85, // Slightly deprioritizes QB early
+      RB: 1.1, // Prioritizes RB value
+      WR: 1.1, // Prioritizes WR value
+      TE: 0.9, // Moderate TE priority
+      K: 0.5, // Waits on K
+      DEF: 0.5, // Waits on DEF
+    },
+    reachThreshold: 0.1, // Almost never reaches - pure BPA
+    panicFactor: 0.1, // Doesn't panic - trusts the board
+    byeWeekAwareness: 0.8, // Good bye week awareness
+    favoriteTeams: [],
+  },
 };
 
 /**

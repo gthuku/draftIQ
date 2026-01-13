@@ -1,13 +1,86 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useDraftStore } from '@/store/draft-store';
 import { Player, DraftPick } from '@/lib/types';
 import { Dropdown } from '@/components/ui/dropdown';
+import { Logo } from '@/components/ui/logo';
+
+// Define roster slot structure
+interface RosterSlot {
+  id: string;
+  label: string;
+  position: string | string[]; // single position or array for FLEX/BENCH
+  player: Player | null;
+}
+
+function assignPlayersToRosterSlots(roster: Player[]): RosterSlot[] {
+  const slots: RosterSlot[] = [
+    { id: 'qb', label: 'QB', position: 'QB', player: null },
+    { id: 'rb1', label: 'RB1', position: 'RB', player: null },
+    { id: 'rb2', label: 'RB2', position: 'RB', player: null },
+    { id: 'wr1', label: 'WR1', position: 'WR', player: null },
+    { id: 'wr2', label: 'WR2', position: 'WR', player: null },
+    { id: 'te', label: 'TE', position: 'TE', player: null },
+    { id: 'flex', label: 'FLEX', position: ['RB', 'WR', 'TE'], player: null },
+    { id: 'k', label: 'K', position: 'K', player: null },
+    { id: 'def', label: 'DEF', position: 'DEF', player: null },
+    { id: 'bench1', label: 'BN', position: ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'], player: null },
+    { id: 'bench2', label: 'BN', position: ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'], player: null },
+    { id: 'bench3', label: 'BN', position: ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'], player: null },
+    { id: 'bench4', label: 'BN', position: ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'], player: null },
+  ];
+
+  // Track assigned players
+  const assignedPlayerIds = new Set<string>();
+
+  // First pass: assign to primary position slots
+  for (const player of roster) {
+    for (const slot of slots) {
+      if (slot.player) continue; // slot already filled
+      if (assignedPlayerIds.has(player.id)) continue; // player already assigned
+
+      const isMatch = Array.isArray(slot.position)
+        ? false // skip flex/bench in first pass
+        : slot.position === player.position;
+
+      if (isMatch) {
+        slot.player = player;
+        assignedPlayerIds.add(player.id);
+        break;
+      }
+    }
+  }
+
+  // Second pass: assign remaining players to FLEX
+  for (const player of roster) {
+    if (assignedPlayerIds.has(player.id)) continue;
+
+    const flexSlot = slots.find(s => s.id === 'flex' && !s.player);
+    if (flexSlot && ['RB', 'WR', 'TE'].includes(player.position)) {
+      flexSlot.player = player;
+      assignedPlayerIds.add(player.id);
+    }
+  }
+
+  // Third pass: assign remaining players to bench
+  for (const player of roster) {
+    if (assignedPlayerIds.has(player.id)) continue;
+
+    const benchSlot = slots.find(s => s.id.startsWith('bench') && !s.player);
+    if (benchSlot) {
+      benchSlot.player = player;
+      assignedPlayerIds.add(player.id);
+    }
+  }
+
+  return slots;
+}
 
 export default function DraftPage() {
   const params = useParams();
+  const router = useRouter();
   const draftId = params.id as string;
 
   const {
@@ -38,6 +111,13 @@ export default function DraftPage() {
   useEffect(() => {
     loadDraft();
   }, [draftId]);
+
+  // Redirect to summary when draft is completed
+  useEffect(() => {
+    if (status === 'completed' && !loading) {
+      router.push(`/draft/${draftId}/summary`);
+    }
+  }, [status, loading, draftId, router]);
 
   // Auto-trigger AI picks
   useEffect(() => {
@@ -139,13 +219,7 @@ export default function DraftPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">Draft Complete!</h1>
-          <p className="text-gray-600 mb-8">All picks have been made</p>
-          <button
-            onClick={() => window.location.href = '/'}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg shadow-md hover:shadow-lg transition-all"
-          >
-            Start New Draft
-          </button>
+          <p className="text-gray-600 mb-8">Redirecting to summary...</p>
         </div>
       </div>
     );
@@ -158,23 +232,16 @@ export default function DraftPage() {
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-blue-600">DraftIQ</h1>
               <p className="text-sm text-gray-600">
                 Round {currentRound} - Pick {pickNumber}
               </p>
-            </div>
-            <div className="text-right">
               {currentTeam && (
-                <>
-                  <div className="text-lg font-semibold text-gray-900">
-                    {isMyTurn ? '🟢 YOUR PICK' : `⏳ ${currentTeam.name} picking...`}
-                  </div>
-                  <div className="text-sm text-gray-500">
-                    {teams.find(t => t.isUser)?.roster.length || 0} / {teams[0]?.roster.length || 0} picks made
-                  </div>
-                </>
+                <div className="text-lg font-semibold text-gray-900">
+                  {isMyTurn ? '🟢 YOUR PICK' : `⏳ ${currentTeam.name} picking...`}
+                </div>
               )}
             </div>
+            <Logo size="md" />
           </div>
         </div>
       </header>
@@ -223,10 +290,26 @@ export default function DraftPage() {
                   } ${!isMyTurn && 'opacity-50 cursor-not-allowed'}`}
                 >
                   <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="font-semibold text-gray-900">{player.name}</div>
-                      <div className="text-xs text-gray-600">
-                        {player.team} · {player.position} · ADP: {player.adp.toFixed(1)}
+                    <div className="flex items-center gap-3 flex-1">
+                      {player.headshot ? (
+                        <img
+                          src={player.headshot}
+                          alt={player.name}
+                          className="w-10 h-10 rounded-full object-cover bg-gray-200"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center text-gray-500 text-sm font-bold">
+                          {player.position}
+                        </div>
+                      )}
+                      <div>
+                        <div className="font-semibold text-gray-900">{player.name}</div>
+                        <div className="text-xs text-gray-600">
+                          {player.team} · {player.position} · ADP: {player.adp.toFixed(1)}
+                        </div>
                       </div>
                     </div>
                     <div className="text-right text-xs text-gray-500">
@@ -263,17 +346,31 @@ export default function DraftPage() {
                     key={pick.id}
                     className="bg-gray-50 rounded-lg p-3 border border-gray-200"
                   >
-                    <div className="flex items-start justify-between">
-                      <div>
+                    <div className="flex items-center gap-3">
+                      {player?.headshot ? (
+                        <img
+                          src={player.headshot}
+                          alt={player.name}
+                          className="w-8 h-8 rounded-full object-cover bg-gray-200 flex-shrink-0"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
+                        />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-gray-500 text-xs font-bold flex-shrink-0">
+                          {player?.position}
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
                         <div className="text-xs text-gray-500">
                           {pick.round}.{pick.pickInRound} · {team?.name}
                         </div>
-                        <div className="font-semibold text-gray-900">{player?.name}</div>
+                        <div className="font-semibold text-gray-900 truncate">{player?.name}</div>
                         <div className="text-xs text-gray-600">
                           {player?.position} · {player?.team}
                         </div>
                       </div>
-                      <div className="text-xs text-gray-500">
+                      <div className="text-xs text-gray-500 flex-shrink-0">
                         #{pick.pickNumber}
                       </div>
                     </div>
@@ -286,23 +383,53 @@ export default function DraftPage() {
           {/* Right: Team Rosters */}
           <div className="col-span-3 bg-white rounded-xl p-5 border border-gray-200 shadow-sm max-h-[calc(100vh-180px)] overflow-hidden flex flex-col">
             <h2 className="text-xl font-bold text-gray-900 mb-4">Your Team</h2>
-            <div className="flex-1 overflow-y-auto space-y-2">
-              {teams.find(t => t.isUser)?.roster.map((player) => (
+            <div className="flex-1 overflow-y-auto space-y-1">
+              {assignPlayersToRosterSlots(teams.find(t => t.isUser)?.roster || []).map((slot) => (
                 <div
-                  key={player.id}
-                  className="bg-gray-50 rounded-lg p-3 border border-gray-200"
+                  key={slot.id}
+                  className={`rounded-lg p-2 border ${
+                    slot.player
+                      ? 'bg-green-50 border-green-200'
+                      : 'bg-gray-50 border-gray-200 border-dashed'
+                  }`}
                 >
-                  <div className="font-medium text-sm text-gray-900">{player.name}</div>
-                  <div className="text-xs text-gray-600">
-                    {player.position} · {player.team}
+                  <div className="flex items-center gap-2">
+                    <div className={`w-10 text-xs font-bold ${
+                      slot.player ? 'text-green-700' : 'text-gray-400'
+                    }`}>
+                      {slot.label}
+                    </div>
+                    {slot.player ? (
+                      <>
+                        {slot.player.headshot ? (
+                          <img
+                            src={slot.player.headshot}
+                            alt={slot.player.name}
+                            className="w-7 h-7 rounded-full object-cover bg-gray-200 flex-shrink-0"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none';
+                            }}
+                          />
+                        ) : (
+                          <div className="w-7 h-7 rounded-full bg-gray-300 flex items-center justify-center text-gray-500 text-[10px] font-bold flex-shrink-0">
+                            {slot.player.position}
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-sm text-gray-900 truncate">{slot.player.name}</div>
+                          <div className="text-[10px] text-gray-600">
+                            {slot.player.position} · {slot.player.team}
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="text-xs text-gray-400 italic">
+                        Empty
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
-              {(!teams.find(t => t.isUser)?.roster.length) && (
-                <div className="text-center text-gray-500 py-8">
-                  No picks yet
-                </div>
-              )}
             </div>
           </div>
         </div>
