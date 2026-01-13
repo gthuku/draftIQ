@@ -12,7 +12,7 @@ let playerCache: { data: Player[]; timestamp: number } | null = null;
 export async function fetchSleeperPlayers(): Promise<SleeperPlayer[]> {
   try {
     const response = await fetch(`${SLEEPER_API_BASE}/players/nfl`, {
-      next: { revalidate: 3600 }, // Cache for 1 hour
+      cache: 'no-store', // Disable Next.js cache (response too large, using in-memory cache instead)
     });
 
     if (!response.ok) {
