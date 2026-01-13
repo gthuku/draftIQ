@@ -3,10 +3,10 @@ import { drafts } from '../create/route';
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const draftId = params.id;
+    const { id: draftId } = await params;
 
     const draft = drafts.get(draftId);
 

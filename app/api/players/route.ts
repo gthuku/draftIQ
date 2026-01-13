@@ -1,21 +1,29 @@
 import { NextResponse } from 'next/server';
-import { getFantasyPlayers, getTopPlayers } from '@/lib/api/sleeper';
+import { fetchNFLPlayers } from '@/lib/api/nfl-data-api';
+import { ScoringFormat } from '@/lib/types';
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const topOnly = searchParams.get('top');
-    const count = searchParams.get('count');
+    const scoringFormat = (searchParams.get('scoring_format') || 'ppr') as ScoringFormat;
+    const limit = parseInt(searchParams.get('limit') || '300');
 
-    let players;
-
-    if (topOnly && count) {
-      players = await getTopPlayers(parseInt(count));
-    } else if (topOnly) {
-      players = await getTopPlayers(200); // Default top 200
-    } else {
-      players = await getFantasyPlayers();
+    // Validate scoring format
+    if (!['standard', 'ppr', 'half_ppr'].includes(scoringFormat)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Invalid scoring format. Must be standard, ppr, or half_ppr',
+        },
+        { status: 400 }
+      );
     }
+
+    const players = await fetchNFLPlayers({
+      scoringFormat,
+      year: 2025,
+      limit
+    });
 
     return NextResponse.json({
       success: true,
