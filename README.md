@@ -46,7 +46,7 @@ AI drafts based on:
 - **State Management**: Zustand
 - **Styling**: Tailwind CSS
 - **Backend**: Next.js API Routes
-- **Data Source**: Sleeper API (free, real NFL data)
+- **Data Source**: https://github.com/dynastyprocess
 
 ## Getting Started
 
