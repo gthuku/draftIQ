@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { CreateDraftRequest, DraftState } from '@/lib/types';
 import { initializeDraft } from '@/lib/draft/draft-engine';
-import { getFantasyPlayers } from '@/lib/api/sleeper';
+import { fetchNFLPlayers } from '@/lib/api/nfl-data-api';
 import { assignRandomProfiles, getAIProfileById } from '@/lib/ai/profiles';
 
 // In-memory draft storage (in production, use a database)
@@ -34,11 +34,14 @@ export async function POST(request: Request) {
       );
     }
 
-    // Fetch available players
-    const players = await getFantasyPlayers();
+    // Fetch available players with scoring format
+    const players = await fetchNFLPlayers({
+      scoringFormat: settings.scoringType,
+      year: 2025,
+      limit: 250
+    });
 
-    // Get top 250 players for the draft
-    const availablePlayers = players.slice(0, 250);
+    const availablePlayers = players;
 
     // Assign AI profiles
     const numAITeams = settings.numTeams - 1; // Exclude user team

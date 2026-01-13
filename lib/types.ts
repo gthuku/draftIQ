@@ -62,12 +62,43 @@ export interface DraftPick {
   isAIPick: boolean;
 }
 
+// Scoring format types
+export type ScoringFormat = 'standard' | 'ppr' | 'half_ppr';
+
+export interface ScoringFormatInfo {
+  value: ScoringFormat;
+  label: string;
+  description: string;
+  receptionPoints: number;
+}
+
+export const SCORING_FORMATS: ScoringFormatInfo[] = [
+  {
+    value: 'standard',
+    label: 'Standard',
+    description: 'No points for receptions',
+    receptionPoints: 0
+  },
+  {
+    value: 'ppr',
+    label: 'PPR (Full Point)',
+    description: '1 point per reception',
+    receptionPoints: 1
+  },
+  {
+    value: 'half_ppr',
+    label: 'Half PPR',
+    description: '0.5 points per reception',
+    receptionPoints: 0.5
+  }
+];
+
 // Draft Settings
 export interface DraftSettings {
   numTeams: number;
   numRounds: number;
   pickTimeLimit?: number; // seconds per pick (0 = no limit)
-  scoringType: 'standard' | 'ppr' | 'half-ppr';
+  scoringType: ScoringFormat;
   rosterSlots: {
     QB: number;
     RB: number;
